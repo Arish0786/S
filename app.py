@@ -1,6 +1,6 @@
 import streamlit as st
 import pickle
-import joblib
+
 
 # Load the model and vectorizer (adjust paths as needed)
 with open('news_classifier_model.pkl', 'rb') as f:
