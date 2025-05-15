@@ -1,11 +1,11 @@
 import streamlit as st
-import joblib
+import pickle
 import os
 
-# Set page configuration
+# Set Streamlit page configuration
 st.set_page_config(page_title="News Classifier", layout="wide")
 
-# Custom CSS for background and styling
+# Custom CSS styling
 st.markdown("""
     <style>
         [data-testid="stAppViewContainer"] {
@@ -32,7 +32,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Title and subtitle
+# Page title and instructions
 st.title("📰 News Article Classifier")
 st.markdown("""
     <div style="font-size: 18px; font-weight: 300;">
@@ -41,35 +41,40 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Try loading model, vectorizer, and label encoder
+# Try loading model files
 try:
-    model = joblib.load('news_classifier_model.joblib')
-    vectorizer = joblib.load('tfidf_vectorizer.joblib')
-    label_encoder = joblib.load('label_encoder.joblib')
+    with open("news_classifier_model.pkl", "rb") as f:
+        model = pickle.load(f)
+
+    with open("tfidf_vectorizer.pkl", "rb") as f:
+        vectorizer = pickle.load(f)
+
+    with open("label_encoder.pkl", "rb") as f:
+        label_encoder = pickle.load(f)
+
+except FileNotFoundError as e:
+    st.error(f"❌ Missing file: {e.filename}")
+    st.stop()
 except Exception as e:
     st.error(f"❌ Failed to load model or dependencies: {e}")
     st.stop()
 
-# Input field
+# Input text area
 text_input = st.text_area("📝 Enter News Text", height=250, max_chars=2000)
 
-# Predict button
+# Classify button
 if st.button("Classify"):
     if text_input.strip() == "":
         st.warning("⚠️ Please enter some news text.")
     else:
-        # Vectorize input
         input_vector = vectorizer.transform([text_input])
-        
-        # Make prediction
         prediction = model.predict(input_vector)
         predicted_label = label_encoder.inverse_transform([prediction[0]])[0]
 
-        # Show result with optional confidence
+        # Optional confidence if available
         if hasattr(model, "predict_proba"):
             confidence = max(model.predict_proba(input_vector)[0])
             st.success(f"📌 Predicted Category: **{predicted_label}** ({confidence*100:.2f}% confidence)")
         else:
             st.success(f"📌 Predicted Category: **{predicted_label}**")
-
 
