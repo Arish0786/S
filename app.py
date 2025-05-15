@@ -1,33 +1,19 @@
 import streamlit as st
-import pickle
+import joblib
+import os
 
-
-# Load the model and vectorizer (adjust paths as needed)
-with open('news_classifier_model.pkl', 'rb') as f:
-    model = pickle.load(f)
-
-with open('tfidf_vectorizer.pkl', 'rb') as f:
-    vectorizer = pickle.load(f)
-
-with open("label_encoder.pkl", "rb") as f:
-    label_encoder = pickle.load(f)
-
-# Streamlit UI customization
+# Set page configuration
 st.set_page_config(page_title="News Classifier", layout="wide")
 
-# Adding a background image (you can replace the URL with your own or a local image file)
+# Custom CSS for background and styling
 st.markdown("""
     <style>
-        .main {
+        [data-testid="stAppViewContainer"] {
             background-image: url('https://www.example.com/news_background.jpg');
             background-size: cover;
             background-position: center;
-            color: white;
         }
-        .sidebar .sidebar-content {
-            background-color: #f4f4f4;
-        }
-        .stTextInput textarea {
+        [data-testid="stTextArea"] textarea {
             background-color: rgba(0, 0, 0, 0.5);
             color: white;
             font-size: 16px;
@@ -46,25 +32,44 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Title and description
+# Title and subtitle
 st.title("📰 News Article Classifier")
 st.markdown("""
     <div style="font-size: 18px; font-weight: 300;">
-        Enter a news article below, and the model will classify its category. 
+        Enter a news article below, and the model will classify its category.<br>
         Get real-time predictions on the category of the news article you provide!
     </div>
 """, unsafe_allow_html=True)
 
-# Text input for news article
+# Try loading model, vectorizer, and label encoder
+try:
+    model = joblib.load('news_classifier_model.joblib')
+    vectorizer = joblib.load('tfidf_vectorizer.joblib')
+    label_encoder = joblib.load('label_encoder.joblib')
+except Exception as e:
+    st.error(f"❌ Failed to load model or dependencies: {e}")
+    st.stop()
+
+# Input field
 text_input = st.text_area("📝 Enter News Text", height=250, max_chars=2000)
 
-# Prediction button with custom styling
+# Predict button
 if st.button("Classify"):
     if text_input.strip() == "":
-        st.warning("Please enter some news text.")
+        st.warning("⚠️ Please enter some news text.")
     else:
+        # Vectorize input
         input_vector = vectorizer.transform([text_input])
+        
+        # Make prediction
         prediction = model.predict(input_vector)
         predicted_label = label_encoder.inverse_transform([prediction[0]])[0]
-        st.success(f"📌 Predicted Category: **{predicted_label}**")
+
+        # Show result with optional confidence
+        if hasattr(model, "predict_proba"):
+            confidence = max(model.predict_proba(input_vector)[0])
+            st.success(f"📌 Predicted Category: **{predicted_label}** ({confidence*100:.2f}% confidence)")
+        else:
+            st.success(f"📌 Predicted Category: **{predicted_label}**")
+
 
